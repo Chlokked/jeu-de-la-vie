@@ -1,20 +1,6 @@
 #include <stdlib.h>
-
-typedef struct Cell {
-    long x;
-    long y;
-} Cell;
-
-typedef struct Node{
-    Cell cellule;
-    struct Node *suivante;
-}Node;
-
-typedef struct Grid{
-    long capacite;
-    Node **tableau;
-    long cellules_alive;
-}Grid;
+#include <limits.h>
+#include "grid.h"
 
 void init_grid(Grid *grid){
     grid ->capacite = 100;
@@ -61,6 +47,9 @@ void add_cell(Grid *grid, long x, long y){
         return;
     }
 
+    if (grid -> cellules_alive >= grid -> capacite) {
+        resize_grid(grid);
+    }
     long index = hash(x, y, grid -> capacite);
     Node *nouvelle_cellule = malloc(sizeof(Node));
     if (nouvelle_cellule == NULL) {
@@ -94,3 +83,31 @@ void remove_cell(Grid *grid, long x, long y){
     }
 }
 
+void resize_grid(Grid *grid){
+    if (grid->capacite > LONG_MAX / 2) {
+        exit(EXIT_FAILURE);
+    }
+
+    long nouvelle_capacite = grid -> capacite * 2;
+    Node **nouveau_tableau = calloc(nouvelle_capacite, sizeof(Node*));
+    if (nouveau_tableau == NULL) {
+        exit(EXIT_FAILURE);
+    }
+
+    for (long i = 0; i < grid -> capacite; i++) {
+        Node *courant = grid -> tableau[i];
+        while (courant != NULL) {
+            long nouvel_index = hash(courant -> cellule.x, courant -> cellule.y, nouvelle_capacite);
+            Node *suivant = courant -> suivante;
+
+            courant -> suivante = nouveau_tableau[nouvel_index];
+            nouveau_tableau[nouvel_index] = courant;
+
+            courant = suivant;
+        }
+    }
+
+    free(grid -> tableau);
+    grid -> tableau = nouveau_tableau;
+    grid -> capacite = nouvelle_capacite;
+}
